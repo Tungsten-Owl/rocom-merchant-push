@@ -16,7 +16,9 @@
 import configparser
 import datetime
 import json
+import os
 import smtplib
+import sys
 import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -28,8 +30,36 @@ import schedule
 # 配置加载
 # ---------------------------------------------------------------------------
 
+CONFIG_FILE = "config.ini"
+
+if not os.path.exists(CONFIG_FILE):
+    print(f"[ERROR] 配置文件 {CONFIG_FILE} 不存在")
+    print(f"[HINT]  请复制 config.example.ini 为 {CONFIG_FILE} 并填写配置")
+    sys.exit(1)
+
 config = configparser.ConfigParser()
-config.read("config.ini", encoding="utf-8")
+config.read(CONFIG_FILE, encoding="utf-8")
+
+REQUIRED_KEYS = {
+    "smtp": ["host", "port", "use_ssl", "sender", "password", "recipients"],
+    "api": ["url", "key"],
+}
+
+missing = []
+for section, keys in REQUIRED_KEYS.items():
+    if not config.has_section(section):
+        missing.append(f"[{section}] 整个配置节缺失")
+    else:
+        for key in keys:
+            if not config.has_option(section, key):
+                missing.append(f"[{section}] {key}")
+
+if missing:
+    print("[ERROR] 配置文件缺少以下必要配置项:")
+    for m in missing:
+        print(f"  - {m}")
+    print(f"[HINT]  请检查 {CONFIG_FILE} 并补充缺失的配置")
+    sys.exit(1)
 
 SMTP_HOST = config.get("smtp", "host")
 SMTP_PORT = config.getint("smtp", "port")
